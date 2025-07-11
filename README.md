@@ -13,6 +13,7 @@ This MCP (Model Context Protocol) utility connects your DShield SIEM with ChatGP
 - **Comprehensive Data Dictionary**: Built-in data dictionary with field descriptions, query examples, and analysis guidelines
 - **Model Optimization**: Initial prompts and data patterns to reduce trial and error for AI models
 - **Config Optimization**: Streamlined index patterns to minimize connection retries
+- **LaTeX Template Automation**: Generate professional security reports using customizable LaTeX templates with variable substitution and PDF compilation
 
 ## DShield-Specific Capabilities
 
@@ -89,6 +90,10 @@ For detailed implementation information and development history:
 - Python 3.8 or higher
 - Access to Elasticsearch cluster with DShield data
 - DShield API key (optional, for threat intelligence enrichment)
+- LaTeX distribution (optional, for PDF report generation)
+  - **macOS**: Install MacTeX or BasicTeX via `brew install --cask mactex` or `brew install --cask basictex`
+  - **Linux**: Install TeX Live via `sudo apt-get install texlive-full` (Ubuntu/Debian) or `sudo yum install texlive-scheme-full` (RHEL/CentOS)
+  - **Windows**: Install MiKTeX from https://miktex.org/download
 
 ### Virtual Environment Setup
 
@@ -207,6 +212,9 @@ python examples/basic_usage.py
 
 # Data dictionary usage example
 python examples/data_dictionary_usage.py
+
+# LaTeX template usage example
+python examples/latex_template_usage.py
 
 # Test installation (in dev_tools folder)
 cd dev_tools && python test_installation.py
@@ -407,6 +415,37 @@ report = generate_attack_report(events=events, threat_intelligence=ti_data)
 summary = get_security_summary(include_threat_intelligence=True)
 ```
 
+### LaTeX Template Automation
+```python
+# List available templates
+templates = list_latex_templates()
+
+# Get template schema and requirements
+schema = get_latex_template_schema(template_name="Attack_Report")
+
+# Validate document data
+validation = validate_latex_document_data(
+    template_name="Attack_Report",
+    document_data={"title": "Security Incident Report", "author": "Security Team"}
+)
+
+# Generate LaTeX document with PDF compilation
+result = generate_latex_document(
+    template_name="Attack_Report",
+    document_data={
+        "title": "DShield Attack Analysis Report",
+        "author": "Security Operations Center",
+        "date": "2025-01-27",
+        "executive_summary": "Critical security incident detected...",
+        "threat_actors": ["APT29", "Lazarus Group"],
+        "affected_systems": ["Web Server", "Database"],
+        "recommendations": ["Implement MFA", "Update firewall rules"]
+    },
+    output_format="pdf",
+    output_directory="./reports"
+)
+```
+
 ## DShield-Specific Tools
 
 ### Available MCP Tools
@@ -422,6 +461,10 @@ summary = get_security_summary(include_threat_intelligence=True)
 9. **generate_attack_report** - Generate attack report with DShield data
 10. **query_events_by_ip** - Query DShield events for specific IP addresses
 11. **get_security_summary** - Get security summary with DShield enrichment
+12. **list_latex_templates** - List available LaTeX templates
+13. **get_latex_template_schema** - Get schema and variable requirements for a template
+14. **validate_latex_document_data** - Validate document data against template schema
+15. **generate_latex_document** - Generate LaTeX document with variable substitution
 
 ### Available Resources
 

@@ -27,6 +27,7 @@ from src.data_dictionary import DataDictionary
 from src.user_config import get_user_config
 from src.campaign_analyzer import CampaignAnalyzer
 from src.campaign_mcp_tools import CampaignMCPTools
+from src.latex_template_tools import LaTeXTemplateTools
 
 # Configure structured logging
 structlog.configure(
@@ -88,6 +89,7 @@ class DShieldMCPServer:
         self.context_injector = None
         self.campaign_analyzer = None
         self.campaign_tools = None
+        self.latex_tools = None
         
         # Load user configuration
         try:
@@ -757,6 +759,79 @@ class DShieldMCPServer:
                             }
                         }
                     }
+                },
+                {
+                    "name": "generate_latex_document",
+                    "description": "Generate complete and fully referenced documents using LaTeX templates",
+                    "inputSchema": {
+                        "type": "object",
+                        "properties": {
+                            "template_name": {
+                                "type": "string",
+                                "description": "Name of the template to use (e.g., 'Attack_Report')",
+                                "required": True
+                            },
+                            "document_data": {
+                                "type": "object",
+                                "description": "Data to populate the template with (variables, content, etc.)",
+                                "required": True
+                            },
+                            "output_format": {
+                                "type": "string",
+                                "enum": ["pdf", "tex"],
+                                "description": "Output format (default: pdf)"
+                            },
+                            "include_assets": {
+                                "type": "boolean",
+                                "description": "Whether to include template assets (default: true)"
+                            },
+                            "compile_options": {
+                                "type": "object",
+                                "description": "Additional LaTeX compilation options"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "list_latex_templates",
+                    "description": "List all available LaTeX templates with metadata and requirements",
+                    "inputSchema": {
+                        "type": "object",
+                        "properties": {}
+                    }
+                },
+                {
+                    "name": "get_latex_template_schema",
+                    "description": "Get the schema and requirements for a specific LaTeX template",
+                    "inputSchema": {
+                        "type": "object",
+                        "properties": {
+                            "template_name": {
+                                "type": "string",
+                                "description": "Name of the template to get schema for",
+                                "required": True
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "validate_latex_document_data",
+                    "description": "Validate document data against template requirements",
+                    "inputSchema": {
+                        "type": "object",
+                        "properties": {
+                            "template_name": {
+                                "type": "string",
+                                "description": "Name of the template to validate against",
+                                "required": True
+                            },
+                            "document_data": {
+                                "type": "object",
+                                "description": "Document data to validate",
+                                "required": True
+                            }
+                        }
+                    }
                 }
             ]
         
@@ -810,6 +885,14 @@ class DShieldMCPServer:
                     return await self._search_campaigns(arguments)
                 elif name == "get_campaign_details":
                     return await self._get_campaign_details(arguments)
+                elif name == "generate_latex_document":
+                    return await self._generate_latex_document(arguments)
+                elif name == "list_latex_templates":
+                    return await self._list_latex_templates(arguments)
+                elif name == "get_latex_template_schema":
+                    return await self._get_latex_template_schema(arguments)
+                elif name == "validate_latex_document_data":
+                    return await self._validate_latex_document_data(arguments)
                 else:
                     raise ValueError(f"Unknown tool: {name}")
             except Exception as e:
@@ -911,6 +994,9 @@ class DShieldMCPServer:
         # Initialize campaign analyzer and tools
         self.campaign_analyzer = CampaignAnalyzer(self.elastic_client)
         self.campaign_tools = CampaignMCPTools(self.elastic_client)
+        
+        # Initialize LaTeX template tools
+        self.latex_tools = LaTeXTemplateTools()
         
         # Log user configuration summary
         logger.info("DShield MCP Server initialized successfully", 
@@ -1922,6 +2008,74 @@ class DShieldMCPServer:
         return [{
             "type": "text",
             "text": "Campaign Details:\n\n" + 
+                   json.dumps(result, indent=2, default=str)
+        }]
+    
+    async def _generate_latex_document(self, arguments: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Generate a complete document from a LaTeX template."""
+        template_name = arguments["template_name"]
+        document_data = arguments["document_data"]
+        output_format = arguments.get("output_format", "pdf")
+        include_assets = arguments.get("include_assets", True)
+        compile_options = arguments.get("compile_options")
+        
+        logger.info("Generating LaTeX document",
+                   template_name=template_name,
+                   output_format=output_format,
+                   include_assets=include_assets)
+        
+        result = await self.latex_tools.generate_document(
+            template_name=template_name,
+            document_data=document_data,
+            output_format=output_format,
+            include_assets=include_assets,
+            compile_options=compile_options
+        )
+        
+        return [{
+            "type": "text",
+            "text": "LaTeX Document Generation Results:\n\n" + 
+                   json.dumps(result, indent=2, default=str)
+        }]
+    
+    async def _list_latex_templates(self, arguments: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """List all available LaTeX templates."""
+        logger.info("Listing LaTeX templates")
+        
+        result = await self.latex_tools.list_available_templates()
+        
+        return [{
+            "type": "text",
+            "text": "Available LaTeX Templates:\n\n" + 
+                   json.dumps(result, indent=2, default=str)
+        }]
+    
+    async def _get_latex_template_schema(self, arguments: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Get the schema for a specific LaTeX template."""
+        template_name = arguments["template_name"]
+        
+        logger.info("Getting LaTeX template schema", template_name=template_name)
+        
+        result = await self.latex_tools.get_template_schema(template_name)
+        
+        return [{
+            "type": "text",
+            "text": f"LaTeX Template Schema for '{template_name}':\n\n" + 
+                   json.dumps(result, indent=2, default=str)
+        }]
+    
+    async def _validate_latex_document_data(self, arguments: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Validate document data against template requirements."""
+        template_name = arguments["template_name"]
+        document_data = arguments["document_data"]
+        
+        logger.info("Validating LaTeX document data", template_name=template_name)
+        
+        result = await self.latex_tools.validate_document_data(template_name, document_data)
+        
+        return [{
+            "type": "text",
+            "text": f"LaTeX Document Data Validation for '{template_name}':\n\n" + 
                    json.dumps(result, indent=2, default=str)
         }]
     
